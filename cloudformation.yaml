@@ -20,4 +20,20 @@ Resources:
         info:
           title: !Ref AWS::StackName
           version: 1.0.0
-        paths: {}
+        paths:
+          "/server":
+            post:
+              responses:
+                default:
+                  description: Response
+              x-amazon-apigateway-integration:
+                type: mock
+        components:
+          securitySchemes:
+            sigv4:
+              type: apiKey
+              name: Authorization
+              in: header
+              x-amazon-apigateway-authtype: awsSigv4
+        security:
+        - sigv4: []
