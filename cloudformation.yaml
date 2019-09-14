@@ -24,10 +24,26 @@ Resources:
           "/server":
             post:
               responses:
-                default:
-                  description: Response
+                "501":
+                  description: Not implemented error
+                  content:
+                    application/json:
+                      schema:
+                        type: object
+                        properties:
+                          message:
+                            type: string
               x-amazon-apigateway-integration:
                 type: mock
+                requestTemplates:
+                  application/json: >
+                    {"statusCode": 501}
+                responses:
+                  "501":
+                    statusCode: 501
+                    responseTemplates:
+                      application/json: >
+                        {"message": "The requested API has not been implemented"}
         components:
           securitySchemes:
             sigv4:
