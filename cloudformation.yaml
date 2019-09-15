@@ -53,3 +53,8 @@ Resources:
               x-amazon-apigateway-authtype: awsSigv4
         security:
         - sigv4: []
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref Api
+      StageName: elasticraft
