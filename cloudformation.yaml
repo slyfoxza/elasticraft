@@ -23,6 +23,17 @@ Resources:
         paths:
           "/server":
             post:
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      properties:
+                        operation:
+                          type: string
+                          enum: [start, stop]
+                      required: [operation]
+                required: true
               responses:
                 "501":
                   description: Not implemented error
@@ -33,6 +44,7 @@ Resources:
                         properties:
                           message:
                             type: string
+              x-amazon-apigateway-request-validator: full
               x-amazon-apigateway-integration:
                 type: mock
                 requestTemplates:
@@ -53,6 +65,10 @@ Resources:
               x-amazon-apigateway-authtype: awsSigv4
         security:
         - sigv4: []
+        x-amazon-apigateway-request-validators:
+          full:
+            validateRequestBody: true
+            validateRequestParameters: true
   ApiDeployment:
     Type: AWS::ApiGateway::Deployment
     Properties:
