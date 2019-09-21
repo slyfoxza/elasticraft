@@ -1,0 +1,3 @@
+*.py.zip
+
+/cloudformation-packaged.yaml
