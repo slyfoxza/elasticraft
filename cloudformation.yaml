@@ -17,6 +17,13 @@ Resources:
       Handler: server_post.handler
       Runtime: python3.7
       CodeUri: server_post.py.zip
+  ServerPostApiFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ServerPostApiFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/*/POST/server
   Api:
     Type: AWS::ApiGateway::RestApi
     Properties:
@@ -53,16 +60,9 @@ Resources:
                             type: string
               x-amazon-apigateway-request-validator: full
               x-amazon-apigateway-integration:
-                type: mock
-                requestTemplates:
-                  application/json: >
-                    {"statusCode": 501}
-                responses:
-                  "501":
-                    statusCode: 501
-                    responseTemplates:
-                      application/json: >
-                        {"message": "The requested API has not been implemented"}
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ServerPostApiFunction.Arn}/invocations
         components:
           securitySchemes:
             sigv4:
