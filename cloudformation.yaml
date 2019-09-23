@@ -130,6 +130,12 @@ Resources:
             Action: iam:PassRole
             # FIXME
             Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/Elasticraft/*
+          - Effect: Allow
+            Action: ec2:TerminateInstances
+            Resource: !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/*
+            Condition:
+              StringEquals:
+                ec2:ResourceTag/elasticraft: instance
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:

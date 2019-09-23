@@ -18,11 +18,15 @@ MAX_RETRY_DELAY = 1.0
 ec2 = boto3.resource('ec2')
 
 
-def handle_start(request_id):
-    instances = list(ec2.instances.filter(Filters=[
+def list_instances():
+    return list(ec2.instances.filter(Filters=[
         {"Name": "tag:elasticraft", "Values": ["instance"]},
         {"Name": "instance-state-name", "Values": ["pending", "running", "shutting-down", "stopping",
                                                    "stopped"]}]))
+
+
+def handle_start(request_id):
+    instances = list_instances()
     if len(instances) >= 1:
         return {
             "statusCode": 400,
@@ -52,9 +56,17 @@ def handle_start(request_id):
 
 
 def handle_stop():
+    instances = list_instances()
+    if len(instances) != 1:
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"message": "Failed to stop server instance"})
+        }
+
+    instances[0].terminate()
     return {
-        "statusCode": 501,
-        "body": json.dumps({"message": "The requested operation has not been implemented"})
+        "statusCode": 200,
+        "body": "{}"
     }
 
 
