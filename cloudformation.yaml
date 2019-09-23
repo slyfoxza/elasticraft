@@ -17,6 +17,8 @@ Resources:
       Handler: server_post.handler
       Runtime: python3.7
       CodeUri: server_post.py.zip
+      Role: !GetAtt ApiFunctionRole.Arn
+      Timeout: 20
   ServerPostApiFunctionPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -49,8 +51,16 @@ Resources:
                       required: [operation]
                 required: true
               responses:
-                "501":
-                  description: Not implemented error
+                "200":
+                  description: Success
+                  content:
+                    application/json:
+                      schema:
+                        type: object
+                        properties:
+                          ipAddress: { type: string }
+                default:
+                  description: Generic error
                   content:
                     application/json:
                       schema:
@@ -81,3 +91,48 @@ Resources:
     Properties:
       RestApiId: !Ref Api
       StageName: elasticraft
+  ApiFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: !Sub /${AWS::StackName}/
+      ManagedPolicyArns:
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+      - PolicyName: Ec2AccessPolicy
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:DescribeInstances
+            - ec2:DescribeLaunchTemplates
+            Resource: "*"
+          - Effect: Allow
+            Action: ec2:RunInstances
+            NotResource: !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/*
+            Condition:
+              ArnLike:
+                ec2:LaunchTemplate: !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/*
+              Bool:
+                ec2:IsLaunchTemplateResource: true
+          - Effect: Allow
+            Action: ec2:RunInstances
+            Resource: !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/*
+            Condition:
+              StringEquals:
+                ec2:ResourceTag/elasticraft: launchTemplate
+          - Effect: Allow
+            Action: ec2:CreateTags
+            Resource:
+            - !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/*
+            - !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:volume/*
+          - Effect: Allow
+            Action: iam:PassRole
+            # FIXME
+            Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/Elasticraft/*
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Action: sts:AssumeRole
+          Principal: { Service: lambda.amazonaws.com }
