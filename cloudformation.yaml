@@ -18,7 +18,7 @@ Resources:
       Runtime: python3.7
       CodeUri: server_post.py.zip
       Role: !GetAtt ApiFunctionRole.Arn
-      Timeout: 20
+      Timeout: 30
   ServerPostApiFunctionPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -131,8 +131,7 @@ Resources:
             - !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:volume/*
           - Effect: Allow
             Action: iam:PassRole
-            # FIXME
-            Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/Elasticraft/*
+            Resource: !GetAtt InstanceRole.Arn
           - Effect: Allow
             Action: ec2:TerminateInstances
             Resource: !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/*
@@ -145,3 +144,61 @@ Resources:
           Effect: Allow
           Action: sts:AssumeRole
           Principal: { Service: lambda.amazonaws.com }
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: !Sub /${AWS::StackName}/
+      Policies:
+      - PolicyName: CloudWatchLogsAccessPolicy
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:DescribeLogGroups
+            - logs:DescribeLogStreams
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource:
+            - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:cloud-init-output.log:log-stream:*
+            - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:minecraft.log:log-stream:*
+      - PolicyName: Ec2AccessPolicy
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:DescribeInstances
+            - ec2:DescribeNetworkInterfaces
+            - ec2:DescribeSecurityGroups
+            - ec2:DescribeVolumes
+            - ec2:ModifyNetworkInterfaceAttribute
+            Resource: "*"
+          - Effect: Allow
+            Action: ec2:AttachVolume
+            Resource: !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/*
+            Condition:
+              StringEquals:
+                ec2:ResourceTag/elasticraft: instance
+          - Effect: Allow
+            Action: ec2:AttachVolume
+            Resource: !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:volume/*
+            Condition:
+              StringEquals:
+                ec2:ResourceTag/elasticraft: dataVolume
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Action: sts:AssumeRole
+          Principal: { Service: ec2.amazonaws.com }
+  InstanceRoleProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: !Sub /${AWS::StackName}/
+      Roles:
+      - !Ref InstanceRole
