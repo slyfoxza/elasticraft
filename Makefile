@@ -10,10 +10,10 @@
 # See the License for the specific language governing permissions and limitations under the License.
 .PHONY: all clean
 
-all: server_post.py.zip
+all: server_post.py.zip snapshot_on_shutdown.py.zip
 
 clean:
-	$(RM) server_post.py.zip
+	$(RM) server_post.py.zip snapshot_on_shutdown.py.zip
 
 %.py.zip: %.py
 	$(RM) $@ && zip -9 -ll $@ $<

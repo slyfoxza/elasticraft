@@ -26,6 +26,23 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/*/POST/server
+  SnapshotOnShutdownFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: snapshot_on_shutdown.handler
+      Runtime: python3.7
+      CodeUri: snapshot_on_shutdown.py.zip
+      Tracing: Active
+      Role: !GetAtt SnapshotOnShutdownRole.Arn
+      Events:
+        InstanceTerminateEvent:
+          Type: CloudWatchEvent
+          Properties:
+            Pattern:
+              source: [aws.ec2]
+              detail-type: [EC2 Instance State-change Notification]
+              detail:
+                state: [terminated]
   Api:
     Type: AWS::ApiGateway::RestApi
     Properties:
@@ -138,6 +155,47 @@ Resources:
             Condition:
               StringEquals:
                 ec2:ResourceTag/elasticraft: instance
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Action: sts:AssumeRole
+          Principal: { Service: lambda.amazonaws.com }
+  SnapshotOnShutdownRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: !Sub /${AWS::StackName}/
+      ManagedPolicyArns:
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AWSXRayDaemonWriteAccess
+      Policies:
+      - PolicyName: Ec2AccessPolicy
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:DescribeInstances
+            - ec2:DescribeVolumes
+            Resource: "*"
+          - Effect: Allow
+            Action: ec2:CreateSnapshot
+            Resource: !Sub arn:${AWS::Partition}:ec2:${AWS::Region}::snapshot/*
+            Condition:
+              StringEquals:
+                aws:RequestTag/elasticraft: dataVolumeSnapshot
+          - Effect: Allow
+            Action: ec2:CreateSnapshot
+            Resource: !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:volume/*
+            Condition:
+              StringEquals:
+                ec2:ResourceTag/elasticraft: dataVolume
+          - Effect: Allow
+            Action: ec2:CreateTags
+            Resource: !Sub arn:${AWS::Partition}:ec2:${AWS::Region}::snapshot/*
+            Condition:
+              StringEquals:
+                ec2:CreateAction: CreateSnapshot
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
