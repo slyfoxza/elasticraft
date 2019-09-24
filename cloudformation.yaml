@@ -91,6 +91,9 @@ Resources:
     Properties:
       RestApiId: !Ref Api
       StageName: elasticraft
+      StageDescription:
+        LoggingLevel: INFO
+        TracingEnabled: true
   ApiFunctionRole:
     Type: AWS::IAM::Role
     Properties:
