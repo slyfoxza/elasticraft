@@ -8,6 +8,7 @@
 # Unless required by applicable law or agreed to in writing, software distributed under the License is
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and limitations under the License.
+import aws_xray_sdk.core
 import boto3
 import json
 import time
@@ -15,6 +16,7 @@ import random
 
 BASE_RETRY_DELAY = 0.01
 MAX_RETRY_DELAY = 1.0
+aws_xray_sdk.core.patch(['boto3'])
 ec2 = boto3.resource('ec2')
 
 

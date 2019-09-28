@@ -10,10 +10,19 @@
 # See the License for the specific language governing permissions and limitations under the License.
 .PHONY: all clean
 
-all: server_post.py.zip snapshot_on_shutdown.py.zip
+all: server_post.zip snapshot_on_shutdown.zip
 
 clean:
-	$(RM) server_post.py.zip snapshot_on_shutdown.py.zip
+	$(RM) server_post.zip snapshot_on_shutdown.zip
+
+pip-install.timestamp: requirements.txt
+	mkdir -p lambda-dependencies
+	pip3 install -r $< -t lambda-dependencies --no-compile --no-deps && touch $@
+
+%.zip: %.py pip-install.timestamp
+	$(RM) $@ && zip -9 -ll $@ $< && \
+		cd lambda-dependencies && \
+		zip -9 -r ../$@ . -x bin/ bin/* *.dist-info/ *.dist-info/*
 
 %.py.zip: %.py
 	$(RM) $@ && zip -9 -ll $@ $<

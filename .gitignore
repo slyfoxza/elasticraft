@@ -1,3 +1,6 @@
-*.py.zip
+*.zip
+
+/lambda-dependencies/
 
 /cloudformation-packaged.yaml
+/pip-install.timestamp

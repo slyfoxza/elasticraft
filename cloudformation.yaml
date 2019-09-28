@@ -16,7 +16,7 @@ Resources:
     Properties:
       Handler: server_post.handler
       Runtime: python3.7
-      CodeUri: server_post.py.zip
+      CodeUri: server_post.zip
       Role: !GetAtt ApiFunctionRole.Arn
       Timeout: 30
   ServerPostApiFunctionPermission:
@@ -31,7 +31,7 @@ Resources:
     Properties:
       Handler: snapshot_on_shutdown.handler
       Runtime: python3.7
-      CodeUri: snapshot_on_shutdown.py.zip
+      CodeUri: snapshot_on_shutdown.zip
       Tracing: Active
       Role: !GetAtt SnapshotOnShutdownRole.Arn
       Events:
