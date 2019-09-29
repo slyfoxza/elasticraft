@@ -12,7 +12,10 @@
 aws-xray-sdk = "~=2.4"
 
 [dev-packages]
+boto3 = "~=1.9"
+colorama = "~=0.4"
 flake8 = "~=3.7"
+click = "~=7.0"
 
 [requires]
 python_version = "3.7"

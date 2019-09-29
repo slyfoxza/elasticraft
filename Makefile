@@ -16,7 +16,7 @@ clean:
 	$(RM) server_post.zip snapshot_on_shutdown.zip
 
 pip-install.timestamp: requirements.txt
-	mkdir -p lambda-dependencies
+	$(RM) -r lambda-dependencies && mkdir -p lambda-dependencies
 	pip3 install -r $< -t lambda-dependencies --no-compile --no-deps && touch $@
 
 %.zip: %.py pip-install.timestamp
