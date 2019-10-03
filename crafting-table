@@ -9,12 +9,20 @@
 # Unless required by applicable law or agreed to in writing, software distributed under the License is
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and limitations under the License.
+import base64
 import boto3
 import botocore
 import click
+import dataclasses
+import email.mime.multipart
+import email.mime.text
+import gzip
+import io
 import ipaddress
 import os
 import sys
+import uuid
+import yaml
 
 
 class CraftingTableError(Exception):
@@ -33,6 +41,10 @@ def cli(context, profile):
     context.obj = boto_session.resource("ec2")
 
 
+def id_list(resources):
+    return ", ".join(map(lambda resource: resource.id, resources))
+
+
 def find_vpc(ec2):
     """
     Finds exactly one VPC tagged with "elasticraft:vpc" that was created by the CloudFormation template. If
@@ -46,8 +58,7 @@ def find_vpc(ec2):
     elif len(vpcs) == 0:
         raise CraftingTableError("No VPC found")
     else:
-        ids = ", ".join(map(lambda vpc: vpc.id, vpcs))
-        raise CraftingTableError(f"Multiple VPCs found: {ids}")
+        raise CraftingTableError(f"Multiple VPCs found: {id_list(vpcs)}")
 
 
 def create_subnets(ec2, vpc, subnets):
@@ -92,8 +103,7 @@ def configure_routing(vpc):
     elif len(internet_gateways) == 0:
         raise CraftingTableError("No internet gateway found")
     else:
-        ids = ", ".join(map(lambda igw: igw.id, internet_gateways))
-        raise CraftingTableError(f"Multiple internet gateways found: {ids}")
+        raise CraftingTableError(f"Multiple internet gateways found: {id_list(internet_gateways)}")
 
     route_tables = list(vpc.route_tables.filter(Filters=[{"Name": "association.main", "Values": ["true"]}]))
     if len(route_tables) == 1:
@@ -101,8 +111,7 @@ def configure_routing(vpc):
     elif len(route_tables) == 0:
         raise CraftingTableError("No route table found")
     if len(route_tables) != 1:
-        ids = ", ".join(map(lambda rtb: rtb.id, route_tables))
-        raise CraftingTableError(f"Multiple route tables found: {ids}")
+        raise CraftingTableError(f"Multiple route tables found: {id_list(route_tables)}")
 
     for route in route_table.routes:
         if route.gateway_id == internet_gateway.id:
@@ -112,16 +121,19 @@ def configure_routing(vpc):
         click.echo(f"Created default route to {internet_gateway.id}")
 
 
-def configure_minecraft_security_group(vpc):
+def find_minecraft_security_group(vpc):
     security_groups = list(vpc.security_groups.filter(Filters=[
         {"Name": "tag:elasticraft", "Values": ["minecraftSecurityGroup"]}]))
     if len(security_groups) == 1:
-        security_group = security_groups[0]
+        return security_groups[0]
     elif len(security_groups) == 0:
         raise CraftingTableError("Could not find Minecraft security group")
     else:
-        ids = ", ".join(map(lambda sg: sg.id, security_groups))
-        raise CraftingTableError(f"Multiple Minecraft security groups: {ids}")
+        raise CraftingTableError(f"Multiple Minecraft security groups: {id_list(security_groups)}")
+
+
+def configure_minecraft_security_group(vpc):
+    security_group = find_minecraft_security_group(vpc)
 
     # Newly-created security groups have an egress permission allowing all outbound traffic that cannot be
     # removed using CloudFormation. Since this security group will be removed at run-time from the network
@@ -149,6 +161,159 @@ def vpc(ec2):
     create_subnets(ec2, vpc, subnets)
     configure_routing(vpc)
     configure_minecraft_security_group(vpc)
+
+
+@dataclasses.dataclass
+class LaunchTemplate:
+    id: str
+    default_version_number: int
+
+
+@dataclasses.dataclass
+class LaunchTemplateVersion:
+    image_id: str
+    key_name: str
+    network_interfaces: list
+    user_data: str
+    version_number: int
+
+
+def find_launch_template(ec2, launch_template_id):
+    if launch_template_id is not None:
+        response = ec2.meta.client.describe_launch_templates(LaunchTemplateIds=[launch_template_id])
+        launch_template = response['LaunchTemplates'][0]
+        ec2.create_tags(Resources=[launch_template_id],
+                        Tags=[{"Key": "elasticraft", "Value": "launchTemplate"}])
+    else:
+        launch_templates = []
+        for page in ec2.meta.client.get_paginator('describe_launch_templates').paginate(
+                Filters=[{"Name": "tag:elasticraft", "Values": ["launchTemplate"]}]):
+            launch_templates += page['LaunchTemplates']
+        if len(launch_templates) == 1:
+            launch_template = launch_templates[0]
+        elif len(launch_template) == 0:
+            raise CraftingTableError("No launch template found")
+        else:
+            ids = ", ".join(map(lambda lt: lt["LaunchTemplateId"], launch_templates))
+            raise CraftingTableError(f"Multiple launch templates found: {ids}")
+
+    return LaunchTemplate(id=launch_template["LaunchTemplateId"],
+                          default_version_number=launch_template["DefaultVersionNumber"])
+
+
+def get_default_launch_template_version(ec2, launch_template):
+    response = ec2.meta.client.describe_launch_template_versions(
+            LaunchTemplateId=launch_template.id, Versions=[str(launch_template.default_version_number)])
+    lt_version = response["LaunchTemplateVersions"][0]
+    lt_data = lt_version["LaunchTemplateData"]
+    return LaunchTemplateVersion(image_id=lt_data.get("ImageId"),
+                                 key_name=lt_data.get("KeyName"),
+                                 network_interfaces=lt_data.get("NetworkInterfaces", []),
+                                 user_data=lt_data.get("UserData"),
+                                 version_number=lt_version["VersionNumber"])
+
+
+def find_data_volume(ec2):
+    volumes = list(ec2.volumes.filter(Filters=[{"Name": "tag:elasticraft", "Values": ["dataVolume"]}]))
+    if len(volumes) == 1:
+        return volumes[0]
+    elif len(volumes) == 0:
+        raise CraftingTableError("No data volume found")
+    else:
+        raise CraftingTableError(f"Multiple data volumes found: {id_list(volumes)}")
+
+
+def find_default_security_group(vpc):
+    security_groups = list(vpc.security_groups.filter(Filters=[
+        {"Name": "group-name", "Values": ["default"]}]))
+    if len(security_groups) == 1:
+        return security_groups[0]
+    elif len(security_groups) == 0:
+        raise CraftingTableError("Could not find default security group")
+    else:
+        raise CraftingTableError(f"Multiple default security groups: {id_list(security_groups)}")
+
+
+@cli.command()
+@click.option("--launch-template-id")
+@click.option("--key-name")
+@click.pass_obj
+def launch_template(ec2, launch_template_id, key_name):
+    launch_template = find_launch_template(ec2, launch_template_id)
+    lt_version = get_default_launch_template_version(ec2, launch_template)
+
+    launch_template_data = {}
+
+    images = ec2.images.filter(ExecutableUsers=["all"], Owners=["amazon"],
+                               Filters=[{"Name": "name", "Values": ["amzn2-ami-hvm-2.0.*-x86_64-gp2"]}])
+    ami = sorted(images, key=lambda ami: ami.creation_date, reverse=True)[0]
+    if ami.id != lt_version.image_id:
+        launch_template_data["ImageId"] = ami.id
+        click.echo(f"Using AMI {ami.description} ({ami.id})")
+
+    if len(lt_version.network_interfaces) == 0:
+        volume = find_data_volume(ec2)
+        vpc = find_vpc(ec2)
+        subnets = list(vpc.subnets.filter(
+            Filters=[{"Name": "availability-zone", "Values": [volume.availability_zone]}]))
+        if len(subnets) == 1:
+            subnet = subnets[0]
+        elif len(subnets) == 0:
+            raise CraftingTableError(f"No subnet found in {volume.availability_zone}")
+        else:
+            raise CraftingTableError(f"Multiple subnets found in {volume.availability_zone}: "
+                                     f"{id_list(subnets)}")
+        default_security_group = find_default_security_group(vpc)
+        minecraft_security_group = find_minecraft_security_group(vpc)
+        launch_template_data["NetworkInterfaces"] = [{
+            "DeviceIndex": 0,
+            "Groups": [default_security_group.id, minecraft_security_group.id],
+            "SubnetId": subnet.id}]
+        click.echo(f"Using {subnet.id} and security groups {default_security_group.id}, "
+                   f"{minecraft_security_group.id}")
+
+    user_data = email.mime.multipart.MIMEMultipart(boundary="ElasticraftMIMEBoundary")
+    parts = (("cloud-init.sh", "x-shellscript"),)
+    for filename, mime_subtype in parts:
+        with open(filename) as f:
+            mime_text = email.mime.text.MIMEText(f.read(), mime_subtype, "UTF-8")
+        mime_text.add_header("Content-Disposition", f'attachment; filename="{filename}"')
+        user_data.attach(mime_text)
+
+    with open("cloud-init.yaml") as f:
+        ci_yaml = yaml.full_load(f.read())
+    with open("attach-volume") as f:
+        ci_yaml["write_files"].append({"path": "/usr/local/sbin/attach-volume", "permissions": "0755",
+                                       "content": f.read()})
+    mime_text = email.mime.text.MIMEText(yaml.dump(ci_yaml), "cloud-config", "UTF-8")
+    user_data.attach(mime_text)
+
+    gzip_bytes = io.BytesIO()
+    with gzip.GzipFile(mode="wb", fileobj=gzip_bytes, mtime=1321653240) as f:
+        f.write(str(user_data).encode())
+    encoded_user_data = base64.b64encode(gzip_bytes.getvalue()).decode('us-ascii')
+    if lt_version.user_data != encoded_user_data:
+        launch_template_data["UserData"] = encoded_user_data
+        click.echo("Updating user data")
+
+    if key_name is not None and lt_version.key_name != key_name:
+        launch_template_data["KeyName"] = key_name
+        click.echo(f"Updating key name to {key_name}")
+
+    if len(launch_template_data) != 0:
+        response = ec2.meta.client.create_launch_template_version(
+                ClientToken=str(uuid.uuid4()), LaunchTemplateData=launch_template_data,
+                LaunchTemplateId=launch_template.id, SourceVersion=str(lt_version.version_number),
+                VersionDescription=f"Updating {', '.join(launch_template_data.keys())} from version "
+                                   f"{lt_version.version_number} by {__file__} script")
+        new_version = response["LaunchTemplateVersion"]["VersionNumber"]
+        ec2.meta.client.modify_launch_template(
+                ClientToken=str(uuid.uuid4()),
+                DefaultVersion=str(new_version),
+                LaunchTemplateId=launch_template.id)
+        click.echo(f"Created new launch template version {new_version}")
+    else:
+        click.echo("No update necessary to launch template")
 
 
 if __name__ == "__main__":

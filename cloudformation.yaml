@@ -41,6 +41,26 @@ Resources:
     Properties:
       VpcId: !Ref Vpc
       InternetGatewayId: !Ref InternetGateway
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Ref AWS::StackName
+      LaunchTemplateData:
+        IamInstanceProfile:
+          Arn: !GetAtt InstanceRoleProfile.Arn
+        InstanceInitiatedShutdownBehavior: terminate
+        InstanceType: c5.large
+        TagSpecifications:
+        - ResourceType: instance
+          Tags:
+          - Key: elasticraft
+            Value: instance
+          - Key: Name
+            Value: Elasticraft
+        - ResourceType: volume
+          Tags:
+          - Key: Name
+            Value: Elasticraft root volume
   ServerPostApiFunction:
     Type: AWS::Serverless::Function
     Properties:
