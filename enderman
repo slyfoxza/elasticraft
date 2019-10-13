@@ -1,0 +1,169 @@
+#!/usr/bin/env python3
+# Copyright 2019 Philip Cronje
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License. You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software distributed under the License is
+# distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and limitations under the License.
+import argparse
+import asyncio
+import boto3
+import ctypes
+import logging
+import os
+import re
+import struct
+import subprocess
+
+logging.basicConfig(format="[%(thread)d:%(threadName)s] %(message)s", level=logging.WARN)
+logger = logging.getLogger('enderman')
+logger.setLevel(logging.INFO)
+
+active_player_count = 0
+log_pattern = re.compile("- (?!<).* (?P<type>joined|left) the game$")
+shutdown_task = None
+shutdown_event = None
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-d", "--dry-run", action="store_true")
+parser.add_argument("-l", "--log-path", default="/var/log/minecraft.log")
+parser.add_argument("-r", "--region", required=True)
+parser.add_argument("-w", "--connection-wait-time", type=int, default=(5 * 60))
+parser.add_argument("-W", "--shutdown-wait-time", type=int, default=5)
+parser.add_argument("-v", "--verbose", action="store_true")
+arguments = parser.parse_args()
+
+if arguments.verbose:
+    logger.setLevel(logging.DEBUG)
+
+ec2 = boto3.resource("ec2", region_name=arguments.region)
+with open("/var/lib/cloud/data/instance-id") as f:
+    ec2_instance = ec2.Instance(f.read().rstrip())
+
+
+async def shutdown():
+    await asyncio.sleep(arguments.connection_wait_time)
+
+    security_groups = list(ec2.Vpc(ec2_instance.vpc_id).security_groups.filter(
+        Filters=[{"Name": "tag:elasticraft", "Values": ["minecraftSecurityGroup"]}]))
+    if len(security_groups) != 1:
+        raise RuntimeError(f"Expected exactly 1 Minecraft security group, found {len(security_groups)}")
+    minecraft_sg = security_groups[0]
+
+    enis = list(ec2_instance.network_interfaces)
+    if len(enis) != 1:
+        raise RuntimeError(f"Expected exactly 1 ENI, found {len(enis)}")
+    eni = enis[0]
+    groups = eni.groups
+    new_groups = []
+    for group in groups:
+        if group["GroupId"] == minecraft_sg.id:
+            logging.info("Removing %s from ENI", group["GroupId"])
+            continue
+        new_groups.append(group["GroupId"])
+    eni.modify_attribute(Groups=new_groups)
+
+    try:
+        await asyncio.sleep(arguments.shutdown_wait_time)
+    except asyncio.CancelledError:
+        logger.info("Shutdown task cancelled, restoring security groups")
+        old_groups = []
+        for group in groups:
+            old_groups.append(group["GroupId"])
+        eni.modify_attribute(Groups=old_groups)
+        raise
+
+    subprocess.run(["/usr/bin/sudo", "/usr/bin/systemctl", "--no-ask-password", "stop", "minecraft"],
+                   check=True)
+    subprocess.run(["/usr/bin/sudo", "/usr/bin/systemctl", "--no-ask-password", "poweroff"], check=True)
+    shutdown_event.set()
+
+
+def parse_log_lines(log):
+    global active_player_count, shutdown_task
+    while True:
+        position = log.tell()
+        line = log.readline()
+        if len(line) == 0:
+            break
+        elif line[-1] != "\n":
+            # Didn't read a full line. Reset the stream position, and wait for the next modification event to
+            # (hopefully) read the full line.
+            log.seek(position)
+            break
+        result = log_pattern.search(line)
+        if result is None:
+            continue
+        if result.group("type") == "joined":
+            active_player_count += 1
+            if active_player_count == 1 and shutdown_task is not None:
+                logger.info("Cancelling shutdown task since a player has joined the server")
+                shutdown_task.cancel()
+                shutdown_task = None
+        else:
+            active_player_count -= 1
+            if active_player_count == 0:
+                logger.info("Last player has left server. Scheduling shutdown task")
+                shutdown_task = asyncio.create_task(shutdown())
+        logger.debug("%d active player(s) after reading player %s log event", active_player_count,
+                     result.group("type"))
+
+
+INOTIFY_STRUCT = "i3I"
+INOTIFY_EVENT_SIZE = struct.calcsize(INOTIFY_STRUCT)
+
+
+def read_inotify(inotify, log):
+    while True:
+        try:
+            result = struct.unpack(INOTIFY_STRUCT, os.read(inotify, INOTIFY_EVENT_SIZE))
+            if result[3] > 0:
+                # If the optional name field is present, consume it from the file descriptor
+                os.read(inotify, result[3])
+        except BlockingIOError:
+            break
+        logger.debug("Received inotify event, parsing log lines")
+        parse_log_lines(log)
+
+
+async def main():
+    global shutdown_task, shutdown_event
+    shutdown_event = asyncio.Event()
+
+    libc = ctypes.CDLL("libc.so.6")
+    libc.inotify_init1.argtypes = [ctypes.c_int]
+    libc.inotify_add_watch.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_uint32]
+    IN_NONBLOCK = 0x800
+    IN_MODIFY = 0x2
+
+    # TODO: Error checking
+    inotify = libc.inotify_init1(IN_NONBLOCK)
+    libc.inotify_add_watch(inotify, arguments.log_path.encode("UTF-8"), IN_MODIFY)
+
+    with open(arguments.log_path) as log:
+        asyncio.get_running_loop().add_reader(inotify, read_inotify, inotify, log)
+        parse_log_lines(log)
+        if active_player_count == 0 and shutdown_task is None:
+            logger.info("No connected players after initial log parse. Scheduling shutdown task")
+            shutdown_task = asyncio.create_task(shutdown())
+            try:
+                await shutdown_task
+            except asyncio.CancelledError:
+                pass
+        while True:
+            try:
+                await asyncio.wait_for(shutdown_event.wait(), 1)
+            except asyncio.TimeoutError:
+                pass
+            if shutdown_task is not None:
+                try:
+                    await shutdown_task
+                except asyncio.CancelledError:
+                    pass
+
+
+asyncio.run(main())

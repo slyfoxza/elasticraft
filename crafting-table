@@ -282,9 +282,10 @@ def launch_template(ec2, launch_template_id, key_name):
 
     with open("cloud-init.yaml") as f:
         ci_yaml = yaml.full_load(f.read())
-    with open("attach-volume") as f:
-        ci_yaml["write_files"].append({"path": "/usr/local/sbin/attach-volume", "permissions": "0755",
-                                       "content": f.read()})
+    scripts = (("attach-volume", "/usr/local/sbin/attach-volume"), ("enderman", "/usr/local/bin/enderman"))
+    for filename, output_path in scripts:
+        with open(filename) as f:
+            ci_yaml["write_files"].append({"path": output_path, "permissions": "0755", "content": f.read()})
     mime_text = email.mime.text.MIMEText(yaml.dump(ci_yaml), "cloud-config", "UTF-8")
     user_data.attach(mime_text)
 

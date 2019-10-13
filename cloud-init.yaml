@@ -21,6 +21,8 @@ users:
   primary_group: games
   shell: /sbin/nologin
   ssh_redirect_user: True
+  sudo:
+  - ALL=(root) NOPASSWD:/usr/bin/systemctl --no-ask-password stop minecraft,/usr/bin/systemctl --no-ask-password poweroff
   system: True
   uid: '25565'
 write_files:
@@ -81,6 +83,22 @@ write_files:
     ProtectSystem=full
     ProtectHome=true
     SyslogIdentifier=minecraft
+
+    [Install]
+    WantedBy=multi-user.target
+- path: /etc/systemd/system/enderman@.service
+  content: |
+    [Unit]
+    Description=Minecraft automatic shutdown service
+    After=minecraft.service
+
+    [Service]
+    ExecStart=/usr/local/bin/enderman --region %i
+    User=minecraft
+    # "strict" isn't supported in Amazon Linux 2's systemd
+    ProtectSystem=full
+    ProtectHome=true
+    SyslogIdentifier=enderman
 
     [Install]
     WantedBy=multi-user.target

@@ -13,7 +13,8 @@
 # Install any pending software updates and additional software packages
 amazon-linux-extras enable java-openjdk11
 yum --assumeyes upgrade
-yum --assumeyes install java-11-openjdk-headless python-boto3
+yum --assumeyes install java-11-openjdk-headless python3
+pip3 install boto3
 
 # Discover some facts about the current instance
 readonly instance_id=$(</var/lib/cloud/data/instance-id)
@@ -49,7 +50,7 @@ readonly minecraft_log_path=/var/log/minecraft.log
 touch $minecraft_log_path && chown minecraft: $minecraft_log_path
 
 # Ensure the server is started when the system boots
-systemctl enable minecraft
+systemctl enable minecraft enderman@$region
 
 # Ensure that /etc/fstab contains an entry for the data volume mount so that the filesystem will be mounted on
 # a reboot.
@@ -57,5 +58,5 @@ echo /dev/$device $elasticraft_dir auto auto,_netdev 0 2 >> /etc/fstab
 
 # If a reboot is not required due to no kernel update having been installed, start the Minecraft server
 if [ $(uname --kernel-release) == $(rpm --query kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}\n'|sort --version-sort|tail --lines=1) ]; then
-	systemctl start minecraft
+	systemctl start minecraft enderman@$region
 fi
