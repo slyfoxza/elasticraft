@@ -292,7 +292,13 @@ def launch_template(ec2, launch_template_id, key_name):
     gzip_bytes = io.BytesIO()
     with gzip.GzipFile(mode="wb", fileobj=gzip_bytes, mtime=1321653240) as f:
         f.write(str(user_data).encode())
-    encoded_user_data = base64.b64encode(gzip_bytes.getvalue()).decode('us-ascii')
+    gzip_bytes = gzip_bytes.getvalue()
+    gzip_bytes_len = len(gzip_bytes)
+    if gzip_bytes_len < 1024:
+        click.echo(f"User data length: {gzip_bytes_len} B/16 KiB")
+    else:
+        click.echo(f"User data length: {format(gzip_bytes_len / 1024., '.2f')} KiB/16 KiB")
+    encoded_user_data = base64.b64encode(gzip_bytes).decode('us-ascii')
     if lt_version.user_data != encoded_user_data:
         launch_template_data["UserData"] = encoded_user_data
         click.echo("Updating user data")
