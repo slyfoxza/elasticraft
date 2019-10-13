@@ -50,7 +50,7 @@ readonly minecraft_log_path=/var/log/minecraft.log
 touch $minecraft_log_path && chown minecraft: $minecraft_log_path
 
 # Ensure the server is started when the system boots
-systemctl enable minecraft enderman@$region
+systemctl enable minecraft enderman@$region rs-comparator@$region
 
 # Ensure that /etc/fstab contains an entry for the data volume mount so that the filesystem will be mounted on
 # a reboot.
@@ -58,5 +58,5 @@ echo /dev/$device $elasticraft_dir auto auto,_netdev 0 2 >> /etc/fstab
 
 # If a reboot is not required due to no kernel update having been installed, start the Minecraft server
 if [ $(uname --kernel-release) == $(rpm --query kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}\n'|sort --version-sort|tail --lines=1) ]; then
-	systemctl start minecraft enderman@$region
+	systemctl start minecraft enderman@$region rs-comparator@$region
 fi

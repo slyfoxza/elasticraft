@@ -102,6 +102,23 @@ write_files:
 
     [Install]
     WantedBy=multi-user.target
+- path: /etc/systemd/system/rs-comparator@.service
+  content: |
+    [Unit]
+    Description=Elasticraft metrics daemon
+    After=network.target remote-fs.target
+    RequiresMountsFor=/srv/elasticraft
+
+    [Service]
+    ExecStart=/usr/local/bin/rs-comparator --region %i
+    User=ec2-user
+    # "strict" isn't supported in Amazon Linux 2's systemd
+    ProtectSystem=full
+    ProtectHome=true
+    SyslogIdentifier=rs-comparator
+
+    [Install]
+    WantedBy=multi-user.target
 - path: /etc/systemd/system/amazon-cloudwatch-agent.service.d/elasticraft.conf
   content: |
     [Service]

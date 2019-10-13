@@ -257,6 +257,13 @@ Resources:
     Properties:
       Path: !Sub /${AWS::StackName}/
       Policies:
+      - PolicyName: CloudWatchAccessPolicy
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action: cloudwatch:PutMetricData
+            Resource: "*"
       - PolicyName: CloudWatchLogsAccessPolicy
         PolicyDocument:
           Version: 2012-10-17

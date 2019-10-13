@@ -282,7 +282,8 @@ def launch_template(ec2, launch_template_id, key_name):
 
     with open("cloud-init.yaml") as f:
         ci_yaml = yaml.full_load(f.read())
-    scripts = (("attach-volume", "/usr/local/sbin/attach-volume"), ("enderman", "/usr/local/bin/enderman"))
+    scripts = (("attach-volume", "/usr/local/sbin/attach-volume"), ("enderman", "/usr/local/bin/enderman"),
+               ("rs-comparator", "/usr/local/bin/rs-comparator"))
     for filename, output_path in scripts:
         with open(filename) as f:
             ci_yaml["write_files"].append({"path": output_path, "permissions": "0755", "content": f.read()})
