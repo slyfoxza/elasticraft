@@ -60,6 +60,7 @@ write_files:
           <Filters>
             <MarkerFilter marker="NETWORK_PACKETS" onMatch="DENY" onMismatch="NEUTRAL"/>
           </Filters>
+          <AppenderRef ref="File"/>
         </Root>
       </Loggers>
     </Configuration>
