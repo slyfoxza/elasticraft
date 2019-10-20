@@ -231,6 +231,7 @@ Resources:
       Path: !Sub /${AWS::StackName}/
       ManagedPolicyArns:
       - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AWSXRayDaemonWriteAccess
       Policies:
       - PolicyName: DynamoDbAccessPolicy
         PolicyDocument:
@@ -251,6 +252,7 @@ Resources:
       Path: !Sub /${AWS::StackName}/
       ManagedPolicyArns:
       - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AWSXRayDaemonWriteAccess
       Policies:
       - PolicyName: Ec2AccessPolicy
         PolicyDocument:
