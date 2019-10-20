@@ -61,6 +61,20 @@ Resources:
           Tags:
           - Key: Name
             Value: Elasticraft root volume
+  ApiAuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: api_authorizer.handler
+      Runtime: python3.7
+      CodeUri: api_authorizer.py.zip
+      Role: !GetAtt GenericFunctionRole.Arn
+  ApiAuthorizerFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ApiAuthorizerFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/authorizers/*
   ServerPostApiFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -164,13 +178,17 @@ Resources:
                 uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ServerPostApiFunction.Arn}/invocations
         components:
           securitySchemes:
-            sigv4:
+            tokenAuthorizer:
               type: apiKey
               name: Authorization
               in: header
-              x-amazon-apigateway-authtype: awsSigv4
+              x-amazon-apigateway-authtype: bearer
+              x-amazon-apigateway-authorizer:
+                type: token
+                authorizerUri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiAuthorizerFunction.Arn}/invocations
+                authorizerResultTtlInSeconds: 0
         security:
-        - sigv4: []
+        - tokenAuthorizer: []
         x-amazon-apigateway-request-validators:
           full:
             validateRequestBody: true
@@ -183,6 +201,18 @@ Resources:
       StageDescription:
         LoggingLevel: INFO
         TracingEnabled: true
+  GenericFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: !Sub /${AWS::StackName}/
+      ManagedPolicyArns:
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Action: sts:AssumeRole
+          Principal: { Service: lambda.amazonaws.com }
   ApiFunctionRole:
     Type: AWS::IAM::Role
     Properties:
