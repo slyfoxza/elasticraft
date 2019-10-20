@@ -95,6 +95,22 @@ Resources:
       PrimaryKey:
         Name: userId
         Type: String
+  ServerGetApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: server_get.handler
+      Runtime: python3.7
+      CodeUri: server_get.py.zip
+      Role: !GetAtt ApiFunctionRole.Arn
+      Layers:
+      - !Ref PythonDependencyLayer
+  ServerGetApiFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ServerGetApiFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/*/GET/server
   ServerPostApiFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -165,6 +181,23 @@ Resources:
                       method.response.header.Access-Control-Allow-Headers: "'Authorization,Content-Type'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Origin: "'*'"
+            get:
+              responses:
+                "200":
+                  description: Server metadata
+                  content:
+                    application/json:
+                      schema:
+                        type: object
+                        properties:
+                          ipAddress: { type: string }
+                          status: { type: string }
+                default:
+                  $ref: "#/components/responses/GenericError"
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ServerGetApiFunction.Arn}/invocations
             post:
               requestBody:
                 content:
@@ -187,20 +220,23 @@ Resources:
                         properties:
                           ipAddress: { type: string }
                 default:
-                  description: Generic error
-                  content:
-                    application/json:
-                      schema:
-                        type: object
-                        properties:
-                          message:
-                            type: string
+                  $ref: "#/components/responses/GenericError"
               x-amazon-apigateway-request-validator: full
               x-amazon-apigateway-integration:
                 type: aws_proxy
                 httpMethod: POST
                 uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ServerPostApiFunction.Arn}/invocations
         components:
+          responses:
+            GenericError:
+              description: Generic error
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    properties:
+                      message:
+                        type: string
           securitySchemes:
             tokenAuthorizer:
               type: apiKey
