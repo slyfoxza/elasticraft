@@ -1,5 +1,5 @@
 ﻿-i https://pypi.org/simple
 aws-xray-sdk==2.4.2
-future==0.17.1
+future==0.18.1
 jsonpickle==1.2
 wrapt==1.11.2

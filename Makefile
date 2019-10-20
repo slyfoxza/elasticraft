@@ -10,19 +10,28 @@
 # See the License for the specific language governing permissions and limitations under the License.
 .PHONY: all clean
 
-all: api_authorizer.py.zip server_post.zip snapshot_on_shutdown.zip
+all: api_authorizer.zip server_post.zip snapshot_on_shutdown.zip
 
 clean:
-	$(RM) api_authorizer.py.zip server_post.zip snapshot_on_shutdown.zip
+	$(RM) api_authorizer.zip server_post.zip snapshot_on_shutdown.zip
+	$(RM) -r pip-install.timestamp requirements.out api_authorizer-requirements.out
 
-pip-install.timestamp: requirements.txt
-	$(RM) -r lambda-dependencies && mkdir -p lambda-dependencies
-	pip3 install -r $< -t lambda-dependencies --no-compile --no-deps && touch $@
+pip-install.timestamp: requirements.txt api_authorizer-requirements.txt
+	for req in $(basename $?); do \
+		$(RM) -r $$req.out && mkdir -p $$req.out; \
+		pip3 install -r $$req.txt -t $$req.out --no-compile --no-deps; \
+		[ $$? -eq 0 ] || exit 1; \
+	done
+	touch $@
 
 %.zip: %.py pip-install.timestamp
-	$(RM) $@ && zip -9 -ll $@ $< && \
-		cd lambda-dependencies && \
-		zip -9 -r ../$@ . -x bin/ bin/* *.dist-info/ *.dist-info/*
+	$(RM) $@ && zip -9 -ll $@ $<
+	if [ -d $(basename $<)-requirements.out ]; then \
+		cd $(basename $<)-requirements.out; \
+	else \
+		cd requirements.out; \
+	fi; \
+	zip -9 -r ../$@ . -x bin/ bin/* *.dist-info/ *.dist-info/*
 
 %.py.zip: %.py
 	$(RM) $@ && zip -9 -ll $@ $<

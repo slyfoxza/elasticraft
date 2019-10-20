@@ -10,6 +10,7 @@
 # See the License for the specific language governing permissions and limitations under the License.
 [packages]
 aws-xray-sdk = "~=2.4"
+google-auth = "~=1.6"
 
 [dev-packages]
 boto3 = "~=1.9"
