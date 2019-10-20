@@ -64,6 +64,11 @@ Resources:
           Tags:
           - Key: Name
             Value: Elasticraft root volume
+  PythonDependencyLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      ContentUri: python_dependency_layer.zip
+      RetentionPolicy: Delete
   ApiAuthorizerFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -75,6 +80,8 @@ Resources:
         Variables:
           CLIENT_ID: !Ref AuthorizerClientId
           TABLE_NAME: !Ref ApiAuthorizationTable
+      Layers:
+      - !Ref PythonDependencyLayer
   ApiAuthorizerFunctionPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -93,9 +100,11 @@ Resources:
     Properties:
       Handler: server_post.handler
       Runtime: python3.7
-      CodeUri: server_post.zip
+      CodeUri: server_post.py.zip
       Role: !GetAtt ApiFunctionRole.Arn
       Timeout: 30
+      Layers:
+      - !Ref PythonDependencyLayer
   ServerPostApiFunctionPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -108,9 +117,11 @@ Resources:
     Properties:
       Handler: snapshot_on_shutdown.handler
       Runtime: python3.7
-      CodeUri: snapshot_on_shutdown.zip
+      CodeUri: snapshot_on_shutdown.py.zip
       Tracing: Active
       Role: !GetAtt SnapshotOnShutdownRole.Arn
+      Layers:
+      - !Ref PythonDependencyLayer
       Events:
         InstanceTerminateEvent:
           Type: CloudWatchEvent
