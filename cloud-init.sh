@@ -11,9 +11,8 @@
 # See the License for the specific language governing permissions and limitations under the License.
 
 # Install any pending software updates and additional software packages
-amazon-linux-extras enable java-openjdk11
 yum --assumeyes upgrade
-yum --assumeyes install java-11-openjdk-headless python3
+yum --assumeyes install java-11-amazon-corretto-headless python3
 pip3 install boto3
 
 # Discover some facts about the current instance
