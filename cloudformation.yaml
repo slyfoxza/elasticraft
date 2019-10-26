@@ -543,3 +543,25 @@ Resources:
       - MetricName: ServerRunningBehindEvents
         MetricNamespace: Elasticraft
         MetricValue: 1
+  DataVolumeSpaceUsedAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: Elasticraft
+      MetricName: DataVolumeSpaceUsedPercent
+      Unit: Percent
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Threshold: 75
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 5
+  ServerRunningBehindAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: Elasticraft
+      MetricName: ServerRunningBehindEvents
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 0
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      TreatMissingData: notBreaching
