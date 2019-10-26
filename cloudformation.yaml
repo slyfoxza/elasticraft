@@ -494,3 +494,52 @@ Resources:
       Path: !Sub /${AWS::StackName}/
       Roles:
       - !Ref InstanceRole
+  ApiAuthorizerFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ApiAuthorizerFunction}
+      RetentionInDays: 365
+  InvokeRoute53CtlFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${InvokeRoute53CtlFunction}
+      RetentionInDays: 30
+  ServerGetApiFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ServerGetApiFunction}
+      RetentionInDays: 30
+  ServerPostApiFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ServerPostApiFunction}
+      RetentionInDays: 30
+  SnapshotOnShutdownFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${SnapshotOnShutdownFunction}
+      RetentionInDays: 30
+  ApiGatewayExecutionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub API-Gateway-Execution-Logs_${Api}/elasticraft
+      RetentionInDays: 30
+  CloudInitOutputLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: cloud-init-output.log
+      RetentionInDays: 30
+  MinecraftLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: minecraft.log
+      RetentionInDays: 365
+  MinecraftLogMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref MinecraftLogGroup
+      FilterPattern: "\"Can't keep up!\" Running \"ticks behind\""
+      MetricTransformations:
+      - MetricName: ServerRunningBehindEvents
+        MetricNamespace: Elasticraft
+        MetricValue: 1
