@@ -12,6 +12,10 @@ AWSTemplateFormatVersion: 2010-09-09
 Parameters:
   AuthorizerClientId:
     Type: String
+  FQDN:
+    Type: String
+  Route53ControlFunctionArn:
+    Type: String
 Transform: AWS::Serverless-2016-10-31
 Resources:
   Vpc:
@@ -95,6 +99,29 @@ Resources:
       PrimaryKey:
         Name: userId
         Type: String
+  InvokeRoute53CtlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: invoke_route53ctl.handler
+      Runtime: python3.7
+      CodeUri: invoke_route53ctl.py.zip
+      Tracing: Active
+      Role: !GetAtt InvokeRoute53CtlFunctionRole.Arn
+      Environment:
+        Variables:
+          FQDN: !Ref FQDN
+          ROUTE53CTL_ARN: !Ref Route53ControlFunctionArn
+      Layers:
+      - !Ref PythonDependencyLayer
+      Events:
+        InstanceStateChangeEvent:
+          Type: CloudWatchEvent
+          Properties:
+            Pattern:
+              source: [aws.ec2]
+              detail-type: [EC2 Instance State-change Notification]
+              detail:
+                state: [running, terminated]
   ServerGetApiFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -327,6 +354,34 @@ Resources:
             Condition:
               StringEquals:
                 ec2:ResourceTag/elasticraft: instance
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Action: sts:AssumeRole
+          Principal: { Service: lambda.amazonaws.com }
+  InvokeRoute53CtlFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: !Sub /${AWS::StackName}/
+      ManagedPolicyArns:
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AWSXRayDaemonWriteAccess
+      Policies:
+      - PolicyName: Ec2AccessPolicy
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action: ec2:DescribeInstances
+            Resource: "*"
+      - PolicyName: LambdaAccessPolicy
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource: !Ref Route53ControlFunctionArn
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:

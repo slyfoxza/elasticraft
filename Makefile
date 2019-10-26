@@ -10,10 +10,10 @@
 # See the License for the specific language governing permissions and limitations under the License.
 .PHONY: all clean
 
-all: api_authorizer.zip python_dependency_layer.zip server_get.py.zip server_post.py.zip snapshot_on_shutdown.py.zip
+all: api_authorizer.zip invoke_route53ctl.py.zip python_dependency_layer.zip server_get.py.zip server_post.py.zip snapshot_on_shutdown.py.zip
 
 clean:
-	$(RM) api_authorizer.zip python_dependency_layer.zip server_get.py.zip server_post.py.zip snapshot_on_shutdown.py.zip
+	$(RM) api_authorizer.zip invoke_route53ctl.py.zip python_dependency_layer.zip server_get.py.zip server_post.py.zip snapshot_on_shutdown.py.zip
 	$(RM) -r pip-install.timestamp requirements.out api_authorizer-requirements.out
 
 pip-install.timestamp: requirements.txt api_authorizer-requirements.txt
