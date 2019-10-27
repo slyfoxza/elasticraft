@@ -1,0 +1,29 @@
+@startuml
+
+!define AWSPuml https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/master/dist
+!include AWSPuml/AWSCommon.puml
+!include AWSPuml/Compute/EC2C5Instance.puml
+!include AWSPuml/Compute/LambdaLambdaFunction.puml
+!include AWSPuml/Database/DynamoDBTable.puml
+!include AWSPuml/General/Users.puml
+!include AWSPuml/ManagementAndGovernance/CloudWatch.puml
+!include AWSPuml/Mobile/APIGateway.puml
+!include AWSPuml/Storage/EBSVolume.puml
+
+left to right direction
+
+APIGateway(api, "Management API", "control instance lifecycle")
+LambdaLambdaFunction(apiLambda, "API functions", "API implementation")
+DynamoDBTable(authTable, "Authorization Table", "stores Google user IDs")
+CloudWatch(cloudWatchLogs, "CloudWatch Logs", "stores server logs")
+EC2C5Instance(instance, "Instance", "Minecraft server instance")
+EBSVolume(dataVolume, "Data volume", "persists Minecraft data across instances")
+
+api --> apiLambda : invokes
+apiLambda --> authTable : reads
+apiLambda --> instance : manages
+instance --> dataVolume : attaches
+instance --> instance : auto-shutdown
+instance --> cloudWatchLogs
+
+@enduml
