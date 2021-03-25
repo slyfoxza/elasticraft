@@ -17,7 +17,7 @@ boto3 = "~=1.9"
 colorama = "~=0.4"
 flake8 = "~=3.7"
 click = "~=7.0"
-PyYAML = "~=5.1"
+PyYAML = "~=5.4"
 
 [requires]
 python_version = "3.7"
