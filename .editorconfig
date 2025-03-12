@@ -11,6 +11,8 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations under
 # the License.
-coverage/
-dist/
-node_modules/
+root = true
+[*]
+indent_size = 2
+indent_style = 2
+insert_final_newline = true
