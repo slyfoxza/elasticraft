@@ -61,6 +61,9 @@ export class MinecraftJavaServer extends Construct {
       props?.instanceType ??
       ec2.InstanceType.of(ec2.InstanceClass.T4G, ec2.InstanceSize.MEDIUM);
     this.launchTemplate = new ec2.LaunchTemplate(this, "LaunchTemplate", {
+      httpTokens: ec2.LaunchTemplateHttpTokens.REQUIRED,
+      instanceInitiatedShutdownBehavior:
+        ec2.InstanceInitiatedShutdownBehavior.TERMINATE,
       instanceType,
       machineImage: ec2.MachineImage.resolveSsmParameterAtLaunch(
         ec2.AmazonLinux2023ImageSsmParameter.ssmParameterName({
@@ -68,6 +71,7 @@ export class MinecraftJavaServer extends Construct {
             instanceType.architecture as unknown as ec2.AmazonLinuxCpuType,
         }),
       ),
+      requireImdsv2: true,
     });
     Tags.of(this.launchTemplate).add("elasticraft:serverId", serverId);
   }

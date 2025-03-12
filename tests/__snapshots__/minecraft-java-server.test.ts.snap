@@ -14,7 +14,11 @@ exports[`MinecraftJavaServer > generates the expected template 1`] = `
       "Properties": {
         "LaunchTemplateData": {
           "ImageId": "resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64",
+          "InstanceInitiatedShutdownBehavior": "terminate",
           "InstanceType": "t4g.medium",
+          "MetadataOptions": {
+            "HttpTokens": "required",
+          },
           "TagSpecifications": [
             {
               "ResourceType": "instance",
