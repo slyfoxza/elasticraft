@@ -12,9 +12,11 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-import { beforeEach, describe, expect, it } from "vitest";
+import { rm } from "node:fs/promises";
 
-import { Stack } from "aws-cdk-lib";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
+import { App, Stack } from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 
@@ -25,6 +27,13 @@ describe(MinecraftJavaServer, () => {
 
   beforeEach(() => {
     stack = new Stack();
+  });
+
+  afterEach(async () => {
+    const outputDirectory = App.of(stack)?.outdir;
+    if (outputDirectory !== undefined) {
+      await rm(outputDirectory, { recursive: true });
+    }
   });
 
   it("generates the expected template", () => {

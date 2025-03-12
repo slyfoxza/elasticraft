@@ -19,6 +19,7 @@
     "constructs": "10"
   },
   "dependencies": {
+    "@types/node": "22",
     "typescript": "5",
     "@tsconfig/node22": "22",
     "vitest": "3",
