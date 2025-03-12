@@ -12,6 +12,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
+import { Tags } from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { Construct } from "constructs";
 
@@ -25,6 +26,20 @@ export interface MinecraftJavaServerProps {
    * @default "t4g.medium"
    */
   instanceType?: ec2.InstanceType;
+
+  /**
+   * The _server ID_ for the server instance this construct manages. This
+   * identifier is used at deployment time to tag resources, and at runtime to
+   * dynamically discover those resources and distinguish them from sibling
+   * resources that may belong to a different server instance.
+   *
+   * The server ID is also used to discover resources managed outside of the CDK
+   * and CloudFormation lifecycle, such as the persistent data volume where game
+   * data is stored.
+   *
+   * If not specified, the {@link MinecraftJavaServer} construct ID will be used.
+   */
+  serverId?: string;
 }
 
 /**
@@ -40,6 +55,7 @@ export class MinecraftJavaServer extends Construct {
 
   constructor(scope: Construct, id: string, props?: MinecraftJavaServerProps) {
     super(scope, id);
+    const serverId = props?.serverId ?? id;
 
     const instanceType =
       props?.instanceType ??
@@ -53,5 +69,6 @@ export class MinecraftJavaServer extends Construct {
         }),
       ),
     });
+    Tags.of(this.launchTemplate).add("elasticraft:serverId", serverId);
   }
 }

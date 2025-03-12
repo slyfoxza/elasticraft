@@ -15,7 +15,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { Stack } from "aws-cdk-lib";
-import { Template } from "aws-cdk-lib/assertions";
+import { Match, Template } from "aws-cdk-lib/assertions";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 
 import { MinecraftJavaServer } from "../src/minecraft-java-server.js";
@@ -42,6 +42,26 @@ describe(MinecraftJavaServer, () => {
     const template = Template.fromStack(stack);
     template.hasResourceProperties("AWS::EC2::LaunchTemplate", {
       LaunchTemplateData: { InstanceType: "c7i.large" },
+    });
+  });
+
+  it("accepts a custom server ID", () => {
+    new MinecraftJavaServer(stack, "Test", { serverId: "my-server" });
+    const template = Template.fromStack(stack);
+    const serverIdTag = { Key: "elasticraft:serverId", Value: "my-server" };
+    template.hasResourceProperties("AWS::EC2::LaunchTemplate", {
+      LaunchTemplateData: {
+        TagSpecifications: [
+          { ResourceType: "instance", Tags: Match.arrayWith([serverIdTag]) },
+          { ResourceType: "volume", Tags: Match.arrayWith([serverIdTag]) },
+        ],
+      },
+      TagSpecifications: [
+        {
+          ResourceType: "launch-template",
+          Tags: Match.arrayWith([serverIdTag]),
+        },
+      ],
     });
   });
 });

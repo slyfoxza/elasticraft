@@ -20,6 +20,10 @@ exports[`MinecraftJavaServer > generates the expected template 1`] = `
               "ResourceType": "instance",
               "Tags": [
                 {
+                  "Key": "elasticraft:serverId",
+                  "Value": "Test",
+                },
+                {
                   "Key": "Name",
                   "Value": "Default/Test/LaunchTemplate",
                 },
@@ -28,6 +32,10 @@ exports[`MinecraftJavaServer > generates the expected template 1`] = `
             {
               "ResourceType": "volume",
               "Tags": [
+                {
+                  "Key": "elasticraft:serverId",
+                  "Value": "Test",
+                },
                 {
                   "Key": "Name",
                   "Value": "Default/Test/LaunchTemplate",
@@ -40,6 +48,10 @@ exports[`MinecraftJavaServer > generates the expected template 1`] = `
           {
             "ResourceType": "launch-template",
             "Tags": [
+              {
+                "Key": "elasticraft:serverId",
+                "Value": "Test",
+              },
               {
                 "Key": "Name",
                 "Value": "Default/Test/LaunchTemplate",
