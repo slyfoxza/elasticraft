@@ -24,9 +24,11 @@ import { MinecraftJavaServer } from "../src/minecraft-java-server.js";
 
 describe(MinecraftJavaServer, () => {
   let stack: Stack;
+  let vpc: ec2.Vpc;
 
   beforeEach(() => {
     stack = new Stack();
+    vpc = new ec2.Vpc(stack, "VPC", { subnetConfiguration: [] });
   });
 
   afterEach(async () => {
@@ -37,7 +39,7 @@ describe(MinecraftJavaServer, () => {
   });
 
   it("generates the expected template", () => {
-    new MinecraftJavaServer(stack, "Test");
+    new MinecraftJavaServer(stack, "Test", { vpc });
     expect(Template.fromStack(stack).toJSON()).toMatchSnapshot();
   });
 
@@ -47,6 +49,7 @@ describe(MinecraftJavaServer, () => {
         ec2.InstanceClass.C7I,
         ec2.InstanceSize.LARGE,
       ),
+      vpc,
     });
     const template = Template.fromStack(stack);
     template.hasResourceProperties("AWS::EC2::LaunchTemplate", {
@@ -55,7 +58,7 @@ describe(MinecraftJavaServer, () => {
   });
 
   it("accepts a custom server ID", () => {
-    new MinecraftJavaServer(stack, "Test", { serverId: "my-server" });
+    new MinecraftJavaServer(stack, "Test", { serverId: "my-server", vpc });
     const template = Template.fromStack(stack);
     const serverIdTag = { Key: "elasticraft:serverId", Value: "my-server" };
     template.hasResourceProperties("AWS::EC2::LaunchTemplate", {

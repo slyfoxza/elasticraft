@@ -10,6 +10,67 @@ exports[`MinecraftJavaServer > generates the expected template 1`] = `
     },
   },
   "Resources": {
+    "TestGameSecurityGroup041BC63D": {
+      "Properties": {
+        "GroupDescription": "Default/Test/GameSecurityGroup",
+        "SecurityGroupEgress": [
+          {
+            "CidrIp": "255.255.255.255/32",
+            "Description": "Disallow all traffic",
+            "FromPort": 252,
+            "IpProtocol": "icmp",
+            "ToPort": 86,
+          },
+        ],
+        "SecurityGroupIngress": [
+          {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "from 0.0.0.0/0:25565",
+            "FromPort": 25565,
+            "IpProtocol": "tcp",
+            "ToPort": 25565,
+          },
+          {
+            "CidrIpv6": "::/0",
+            "Description": "from ::/0:25565",
+            "FromPort": 25565,
+            "IpProtocol": "tcp",
+            "ToPort": 25565,
+          },
+        ],
+        "Tags": [
+          {
+            "Key": "elasticraft:serverId",
+            "Value": "Test",
+          },
+        ],
+        "VpcId": {
+          "Ref": "VPCB9E5F0B4",
+        },
+      },
+      "Type": "AWS::EC2::SecurityGroup",
+    },
+    "TestGeneralSecurityGroupE4043884": {
+      "Properties": {
+        "GroupDescription": "Default/Test/GeneralSecurityGroup",
+        "SecurityGroupEgress": [
+          {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Allow all outbound traffic by default",
+            "IpProtocol": "-1",
+          },
+          {
+            "CidrIpv6": "::/0",
+            "Description": "Allow all outbound ipv6 traffic by default",
+            "IpProtocol": "-1",
+          },
+        ],
+        "VpcId": {
+          "Ref": "VPCB9E5F0B4",
+        },
+      },
+      "Type": "AWS::EC2::SecurityGroup",
+    },
     "TestLaunchTemplate2212C1A1": {
       "Properties": {
         "LaunchTemplateData": {
@@ -19,6 +80,20 @@ exports[`MinecraftJavaServer > generates the expected template 1`] = `
           "MetadataOptions": {
             "HttpTokens": "required",
           },
+          "SecurityGroupIds": [
+            {
+              "Fn::GetAtt": [
+                "TestGameSecurityGroup041BC63D",
+                "GroupId",
+              ],
+            },
+            {
+              "Fn::GetAtt": [
+                "TestGeneralSecurityGroupE4043884",
+                "GroupId",
+              ],
+            },
+          ],
           "TagSpecifications": [
             {
               "ResourceType": "instance",
@@ -90,6 +165,21 @@ echo -n 'Test' > /etc/elasticraft/server-id",
         ],
       },
       "Type": "AWS::EC2::LaunchTemplate",
+    },
+    "VPCB9E5F0B4": {
+      "Properties": {
+        "CidrBlock": "10.0.0.0/16",
+        "EnableDnsHostnames": true,
+        "EnableDnsSupport": true,
+        "InstanceTenancy": "default",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "Default/VPC",
+          },
+        ],
+      },
+      "Type": "AWS::EC2::VPC",
     },
   },
   "Rules": {
