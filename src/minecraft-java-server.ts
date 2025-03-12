@@ -16,10 +16,26 @@ import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { Construct } from "constructs";
 
 export interface MinecraftJavaServerProps {
+  /**
+   * The [EC2 instance type](https://aws.amazon.com/ec2/instance-types/) to
+   * launch the server on. Since Amazon Linux AMIs and Java runtimes are
+   * available for the ARM architecture, Graviton instances are a suitable
+   * choice which can lower the cost of running the server.
+   *
+   * @default "t4g.medium"
+   */
   instanceType?: ec2.InstanceType;
 }
 
+/**
+ * Construct providing resources used to run a Minecraft: Java Edition server.
+ */
 export class MinecraftJavaServer extends Construct {
+  /**
+   * Launch template that may be used with
+   * [RunInstances](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_RunInstances.html)
+   * to start the Minecraft server instance.
+   */
   readonly launchTemplate: ec2.ILaunchTemplate;
 
   constructor(scope: Construct, id: string, props?: MinecraftJavaServerProps) {

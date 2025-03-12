@@ -12,17 +12,36 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { Stack } from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
 
 import { MinecraftJavaServer } from "../src/minecraft-java-server.js";
 
 describe(MinecraftJavaServer, () => {
+  let stack: Stack;
+
+  beforeEach(() => {
+    stack = new Stack();
+  });
+
   it("generates the expected template", () => {
-    const stack = new Stack();
     new MinecraftJavaServer(stack, "Test");
     expect(Template.fromStack(stack).toJSON()).toMatchSnapshot();
+  });
+
+  it("accepts a different instance type", () => {
+    new MinecraftJavaServer(stack, "Test", {
+      instanceType: ec2.InstanceType.of(
+        ec2.InstanceClass.C7I,
+        ec2.InstanceSize.LARGE,
+      ),
+    });
+    const template = Template.fromStack(stack);
+    template.hasResourceProperties("AWS::EC2::LaunchTemplate", {
+      LaunchTemplateData: { InstanceType: "c7i.large" },
+    });
   });
 });
