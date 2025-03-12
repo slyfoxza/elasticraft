@@ -53,9 +53,18 @@ export class MinecraftJavaServer extends Construct {
    */
   readonly launchTemplate: ec2.ILaunchTemplate;
 
+  /**
+   * The _server ID_ for the server instance this construct manages. This will
+   * either be the value supplied in the `props` during construction, or will be
+   * the construct ID.
+   *
+   * @see {@link MinecraftJavaServerProps.serverId}
+   */
+  readonly serverId: string;
+
   constructor(scope: Construct, id: string, props?: MinecraftJavaServerProps) {
     super(scope, id);
-    const serverId = props?.serverId ?? id;
+    this.serverId = props?.serverId ?? id;
 
     const instanceType =
       props?.instanceType ??
@@ -72,7 +81,22 @@ export class MinecraftJavaServer extends Construct {
         }),
       ),
       requireImdsv2: true,
+      userData: this.renderUserData(),
     });
-    Tags.of(this.launchTemplate).add("elasticraft:serverId", serverId);
+    Tags.of(this.launchTemplate).add("elasticraft:serverId", this.serverId);
+  }
+
+  private renderUserData(): ec2.UserData {
+    const userData = new ec2.MultipartUserData();
+    userData.addUserDataPart(
+      ec2.UserData.forLinux(),
+      ec2.MultipartBody.SHELL_SCRIPT,
+      true,
+    );
+    userData.addCommands(
+      "mkdir --parents /etc/elasticraft",
+      `echo -n '${this.serverId}' > /etc/elasticraft/server-id`,
+    );
+    return userData;
   }
 }

@@ -47,6 +47,31 @@ exports[`MinecraftJavaServer > generates the expected template 1`] = `
               ],
             },
           ],
+          "UserData": {
+            "Fn::Base64": {
+              "Fn::Join": [
+                "",
+                [
+                  "Content-Type: multipart/mixed; boundary="+AWS+CDK+User+Data+Separator=="
+MIME-Version: 1.0
+
+--+AWS+CDK+User+Data+Separator==
+Content-Type: text/x-shellscript; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+",
+                  {
+                    "Fn::Base64": "#!/bin/bash
+mkdir --parents /etc/elasticraft
+echo -n 'Test' > /etc/elasticraft/server-id",
+                  },
+                  "
+--+AWS+CDK+User+Data+Separator==--
+",
+                ],
+              ],
+            },
+          },
         },
         "TagSpecifications": [
           {
