@@ -12,8 +12,13 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
+import path from "node:path";
+
 import { Tags } from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as iam from "aws-cdk-lib/aws-iam";
+import * as logs from "aws-cdk-lib/aws-logs";
+import { Asset } from "aws-cdk-lib/aws-s3-assets";
 import { Construct } from "constructs";
 
 export interface MinecraftJavaServerProps {
@@ -75,6 +80,11 @@ export class MinecraftJavaServer extends Construct {
   readonly launchTemplate: ec2.LaunchTemplate;
 
   /**
+   * The role associated with the instance profile for the server.
+   */
+  readonly role: iam.IRole;
+
+  /**
    * The _server ID_ for the server instance this construct manages. This will
    * either be the value supplied in the `props` during construction, or will be
    * the construct ID.
@@ -86,6 +96,10 @@ export class MinecraftJavaServer extends Construct {
   constructor(scope: Construct, id: string, props: MinecraftJavaServerProps) {
     super(scope, id);
     this.serverId = props.serverId ?? id;
+
+    this.role = new iam.Role(this, "Role", {
+      assumedBy: new iam.ServicePrincipal("ec2.amazonaws.com"),
+    });
 
     this.generalSecurityGroup = new ec2.SecurityGroup(
       this,
@@ -127,24 +141,57 @@ export class MinecraftJavaServer extends Construct {
         }),
       ),
       requireImdsv2: true,
+      role: this.role,
       securityGroup: gameSecurityGroup,
       userData: this.renderUserData(),
     });
     Tags.of(this.launchTemplate).add("elasticraft:serverId", this.serverId);
     this.launchTemplate.addSecurityGroup(this.generalSecurityGroup);
+
+    const cloudInitLogGroup = new logs.LogGroup(this, "CloudInitLogGroup", {
+      logGroupName: `${this.serverId}/cloud-init-output.log`,
+      retention: logs.RetentionDays.ONE_MONTH,
+    });
+
+    this.grantRolePermissions({ logGroups: [cloudInitLogGroup] });
   }
 
   private renderUserData(): ec2.UserData {
+    const asset = new Asset(this, "UserDataAsset", {
+      path: path.join(import.meta.dirname, "../assets/minecraft-java"),
+      readers: [this.role],
+    });
+
     const userData = new ec2.MultipartUserData();
     userData.addUserDataPart(
       ec2.UserData.forLinux(),
       ec2.MultipartBody.SHELL_SCRIPT,
       true,
     );
+    const downloadedAsset = userData.addS3DownloadCommand({
+      bucket: asset.bucket,
+      bucketKey: asset.s3ObjectKey,
+      localFile: "/tmp/elasticraft/cloud-init.zip",
+    });
     userData.addCommands(
       "mkdir --parents /etc/elasticraft",
       `echo -n '${this.serverId}' > /etc/elasticraft/server-id`,
+      `cd $(dirname '${downloadedAsset}')`,
+      `unzip ${downloadedAsset}`,
     );
+    userData.addExecuteFileCommand({ filePath: "./cloud-init.sh" });
     return userData;
+  }
+
+  private grantRolePermissions({ logGroups }: { logGroups: logs.LogGroup[] }) {
+    for (const lg of logGroups) lg.grantWrite(this.role);
+
+    this.role.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        // Needed by CloudWatch Agent
+        actions: ["logs:DescribeLogGroups", "logs:DescribeLogStreams"],
+        resources: ["*"],
+      }),
+    );
   }
 }

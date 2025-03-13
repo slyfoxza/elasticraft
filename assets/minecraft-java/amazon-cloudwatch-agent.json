@@ -1,0 +1,14 @@
+{
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/cloud-init-output.log",
+            "log_group_name": "%serverId%/cloud-init-output.log"
+          }
+        ]
+      }
+    }
+  }
+}

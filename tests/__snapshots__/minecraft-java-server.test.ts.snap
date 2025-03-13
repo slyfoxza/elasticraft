@@ -10,6 +10,15 @@ exports[`MinecraftJavaServer > generates the expected template 1`] = `
     },
   },
   "Resources": {
+    "TestCloudInitLogGroupEEDA8A3C": {
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "LogGroupName": "Test/cloud-init-output.log",
+        "RetentionInDays": 30,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Retain",
+    },
     "TestGameSecurityGroup041BC63D": {
       "Properties": {
         "GroupDescription": "Default/Test/GameSecurityGroup",
@@ -72,8 +81,20 @@ exports[`MinecraftJavaServer > generates the expected template 1`] = `
       "Type": "AWS::EC2::SecurityGroup",
     },
     "TestLaunchTemplate2212C1A1": {
+      "DependsOn": [
+        "TestRoleDefaultPolicyAD214F97",
+        "TestRole17AB2208",
+      ],
       "Properties": {
         "LaunchTemplateData": {
+          "IamInstanceProfile": {
+            "Arn": {
+              "Fn::GetAtt": [
+                "TestLaunchTemplateProfile003B66BB",
+                "Arn",
+              ],
+            },
+          },
           "ImageId": "resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64",
           "InstanceInitiatedShutdownBehavior": "terminate",
           "InstanceType": "t4g.medium",
@@ -136,9 +157,27 @@ Content-Transfer-Encoding: base64
 
 ",
                   {
-                    "Fn::Base64": "#!/bin/bash
+                    "Fn::Base64": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "#!/bin/bash
+mkdir -p $(dirname '/tmp/elasticraft/cloud-init.zip')
+aws s3 cp 's3://",
+                          {
+                            "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
+                          },
+                          "/43fc2343972389e01b650471ebb993b44fc0f838d95ec58160fd4cca85195922.zip' '/tmp/elasticraft/cloud-init.zip'
 mkdir --parents /etc/elasticraft
-echo -n 'Test' > /etc/elasticraft/server-id",
+echo -n 'Test' > /etc/elasticraft/server-id
+cd $(dirname '/tmp/elasticraft/cloud-init.zip')
+unzip /tmp/elasticraft/cloud-init.zip
+set -e
+chmod +x './cloud-init.sh'
+'./cloud-init.sh'",
+                        ],
+                      ],
+                    },
                   },
                   "
 --+AWS+CDK+User+Data+Separator==--
@@ -165,6 +204,111 @@ echo -n 'Test' > /etc/elasticraft/server-id",
         ],
       },
       "Type": "AWS::EC2::LaunchTemplate",
+    },
+    "TestLaunchTemplateProfile003B66BB": {
+      "Properties": {
+        "Roles": [
+          {
+            "Ref": "TestRole17AB2208",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::InstanceProfile",
+    },
+    "TestRole17AB2208": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ec2.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "TestRoleDefaultPolicyAD214F97": {
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*",
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":s3:::",
+                      {
+                        "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
+                      },
+                    ],
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":s3:::",
+                      {
+                        "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
+                      },
+                      "/*",
+                    ],
+                  ],
+                },
+              ],
+            },
+            {
+              "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "TestCloudInitLogGroupEEDA8A3C",
+                  "Arn",
+                ],
+              },
+            },
+            {
+              "Action": [
+                "logs:DescribeLogGroups",
+                "logs:DescribeLogStreams",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "TestRoleDefaultPolicyAD214F97",
+        "Roles": [
+          {
+            "Ref": "TestRole17AB2208",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
     },
     "VPCB9E5F0B4": {
       "Properties": {
