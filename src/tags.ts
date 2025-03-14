@@ -12,6 +12,6 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-export enum TagKeys {
-  ServerId = "elasticraft:serverId",
-}
+export const TagKeys = {
+  ServerId: "elasticraft:serverId",
+} as const;
