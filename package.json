@@ -7,6 +7,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./no-cdk": {
+      "types": "./dist/no-cdk.d.ts",
+      "default": "./dist/no-cdk.js"
     }
   },
   "scripts": {
