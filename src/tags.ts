@@ -12,5 +12,6 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-export * from "./minecraft-java-server.js";
-export * from "./tags.js";
+export enum TagKeys {
+  ServerId = "elasticraft:serverId",
+}

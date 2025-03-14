@@ -21,6 +21,8 @@ import * as logs from "aws-cdk-lib/aws-logs";
 import { Asset } from "aws-cdk-lib/aws-s3-assets";
 import { Construct } from "constructs";
 
+import { TagKeys } from "./tags.js";
+
 export interface MinecraftJavaServerProps {
   /**
    * The [EC2 instance type](https://aws.amazon.com/ec2/instance-types/) to
@@ -124,7 +126,7 @@ export class MinecraftJavaServer extends Construct {
     const serverPort = props.serverPort ?? ec2.Port.tcp(25_565);
     gameSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), serverPort);
     gameSecurityGroup.addIngressRule(ec2.Peer.anyIpv6(), serverPort);
-    Tags.of(gameSecurityGroup).add("elasticraft:serverId", this.serverId);
+    Tags.of(gameSecurityGroup).add(TagKeys.ServerId, this.serverId);
 
     const instanceType =
       props.instanceType ??
@@ -145,7 +147,7 @@ export class MinecraftJavaServer extends Construct {
       securityGroup: gameSecurityGroup,
       userData: this.renderUserData(),
     });
-    Tags.of(this.launchTemplate).add("elasticraft:serverId", this.serverId);
+    Tags.of(this.launchTemplate).add(TagKeys.ServerId, this.serverId);
     this.launchTemplate.addSecurityGroup(this.generalSecurityGroup);
 
     const cloudInitLogGroup = new logs.LogGroup(this, "CloudInitLogGroup", {
