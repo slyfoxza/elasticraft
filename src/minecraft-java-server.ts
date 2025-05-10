@@ -20,6 +20,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as logs from "aws-cdk-lib/aws-logs";
 import { Asset } from "aws-cdk-lib/aws-s3-assets";
 import { Construct } from "constructs";
+import * as YAML from "yaml";
 
 import { TagKeys } from "./tags.js";
 
@@ -165,6 +166,26 @@ export class MinecraftJavaServer extends Construct {
     });
 
     const userData = new ec2.MultipartUserData();
+    userData.addUserDataPart(
+      ec2.UserData.custom(
+        YAML.stringify({
+          users: [
+            "default",
+            {
+              name: "minecraft",
+              homedir: "/srv/minecraft",
+              no_create_home: true,
+              no_user_group: true,
+              primary_group: "games",
+              shell: "/sbin/nologin",
+              system: true,
+              uid: 25_565,
+            },
+          ],
+        }),
+      ),
+      'text/cloud-config; charset="utf-8"',
+    );
     userData.addUserDataPart(
       ec2.UserData.forLinux(),
       ec2.MultipartBody.SHELL_SCRIPT,

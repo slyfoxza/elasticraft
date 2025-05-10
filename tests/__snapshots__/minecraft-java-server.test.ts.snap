@@ -152,6 +152,25 @@ exports[`MinecraftJavaServer > generates the expected template 1`] = `
 MIME-Version: 1.0
 
 --+AWS+CDK+User+Data+Separator==
+Content-Type: text/cloud-config; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+",
+                  {
+                    "Fn::Base64": "users:
+  - default
+  - name: minecraft
+    homedir: /srv/minecraft
+    no_create_home: true
+    no_user_group: true
+    primary_group: games
+    shell: /sbin/nologin
+    system: true
+    uid: 25565
+",
+                  },
+                  "
+--+AWS+CDK+User+Data+Separator==
 Content-Type: text/x-shellscript; charset="utf-8"
 Content-Transfer-Encoding: base64
 

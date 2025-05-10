@@ -18,6 +18,9 @@
     "prepare": "tsc -p tsconfig.build.json",
     "test": "vitest run --coverage && eslint ."
   },
+  "dependencies": {
+    "yaml": "2"
+  },
   "peerDependencies": {
     "aws-cdk-lib": "2",
     "constructs": "10"
