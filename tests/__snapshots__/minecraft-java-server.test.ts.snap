@@ -186,7 +186,7 @@ aws s3 cp 's3://",
                           {
                             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
                           },
-                          "/61c7d5deb7923570c0a8a223f04ac22ce45df1b777c636ea4c184c1f9a426790.zip' '/tmp/elasticraft/cloud-init.zip'
+                          "/b17a00596ed8f6a5ffe5c64321752e42e96ac3b5e17e0413bd5f6a0489a5d897.zip' '/tmp/elasticraft/cloud-init.zip'
 mkdir --parents /etc/elasticraft
 echo -n 'Test' > /etc/elasticraft/server-id
 cd $(dirname '/tmp/elasticraft/cloud-init.zip')
@@ -233,6 +233,15 @@ chmod +x './cloud-init.sh'
         ],
       },
       "Type": "AWS::IAM::InstanceProfile",
+    },
+    "TestMinecraftLogGroupC838CA20": {
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "LogGroupName": "Test/minecraft.log",
+        "RetentionInDays": 30,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Retain",
     },
     "TestRole17AB2208": {
       "Properties": {
@@ -305,6 +314,19 @@ chmod +x './cloud-init.sh'
               "Resource": {
                 "Fn::GetAtt": [
                   "TestCloudInitLogGroupEEDA8A3C",
+                  "Arn",
+                ],
+              },
+            },
+            {
+              "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "TestMinecraftLogGroupC838CA20",
                   "Arn",
                 ],
               },

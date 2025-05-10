@@ -155,8 +155,14 @@ export class MinecraftJavaServer extends Construct {
       logGroupName: `${this.serverId}/cloud-init-output.log`,
       retention: logs.RetentionDays.ONE_MONTH,
     });
+    const minecraftLogGroup = new logs.LogGroup(this, "MinecraftLogGroup", {
+      logGroupName: `${this.serverId}/minecraft.log`,
+      retention: logs.RetentionDays.ONE_MONTH,
+    });
 
-    this.grantRolePermissions({ logGroups: [cloudInitLogGroup] });
+    this.grantRolePermissions({
+      logGroups: [cloudInitLogGroup, minecraftLogGroup],
+    });
   }
 
   private renderUserData(): ec2.UserData {

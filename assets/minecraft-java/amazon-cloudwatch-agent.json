@@ -6,6 +6,12 @@
           {
             "file_path": "/var/log/cloud-init-output.log",
             "log_group_name": "%serverId%/cloud-init-output.log"
+          },
+          {
+            "file_path": "/var/log/minecraft.log",
+            "log_group_name": "%serverId%/minecraft.log",
+            "timestamp_format": "%Y-%m-%dT%H:%M:%S,%f",
+            "multi_line_start_pattern": "{timestamp_format}"
           }
         ]
       }

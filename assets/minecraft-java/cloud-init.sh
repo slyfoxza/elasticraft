@@ -22,12 +22,23 @@ jq "walk(if type == \"string\" then gsub(\"%serverId%\"; \"$(</etc/elasticraft/s
   /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
 systemctl enable --now amazon-cloudwatch-agent
 
-dnf --assumeyes install python3 python3-boto3 python3-requests
+dnf --assumeyes install \
+  java-24-amazon-corretto-headless \
+  python3 python3-boto3 python3-requests
 
 # Attach the data volume
 chmod 755 attach-volume.py && ./attach-volume.py
+
+mv -t /etc minecraft-log4j2.xml
+touch /var/log/minecraft.log && \
+  chown minecraft: /var/log/minecraft.log && \
+  chmod 644 /var/log/minecraft.log
+
+mv -t /etc/systemd/system minecraft.service
 
 # Mount the data volume
 mkdir --parents /srv/minecraft && \
   chmod 000 /srv/minecraft && \
   mount /dev/xvdm /srv/minecraft
+
+systemctl enable --now minecraft
