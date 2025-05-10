@@ -14,7 +14,7 @@
  */
 import path from "node:path";
 
-import { Tags } from "aws-cdk-lib";
+import { Stack, Tags } from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as logs from "aws-cdk-lib/aws-logs";
@@ -190,9 +190,53 @@ export class MinecraftJavaServer extends Construct {
 
     this.role.addToPrincipalPolicy(
       new iam.PolicyStatement({
-        // Needed by CloudWatch Agent
-        actions: ["logs:DescribeLogGroups", "logs:DescribeLogStreams"],
+        actions: [
+          // Needed by CloudWatch Agent
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams",
+          // Needed by attach-volume.py
+          "ec2:DescribeVolumes",
+        ],
         resources: ["*"],
+      }),
+    );
+    this.role.addToPrincipalPolicy(
+      /* Needed by attach-volume.py: only allow it to attach the data volume
+       * for this server */
+      new iam.PolicyStatement({
+        actions: ["ec2:AttachVolume"],
+        resources: [
+          Stack.of(this).formatArn({
+            service: "ec2",
+            resource: "volume",
+            resourceName: "*",
+          }),
+        ],
+        conditions: {
+          StringEquals: {
+            "aws:ResourceTag/elasticraft:serverId": this.serverId,
+            "aws:ResourceTag/elasticraft:volumeType": "data-volume",
+          },
+        },
+      }),
+    );
+    this.role.addToPrincipalPolicy(
+      /* Needed by attach-volume.py: only allow it to attach the data volume to
+       * this server's instance */
+      new iam.PolicyStatement({
+        actions: ["ec2:AttachVolume"],
+        resources: [
+          Stack.of(this).formatArn({
+            service: "ec2",
+            resource: "instance",
+            resourceName: "*",
+          }),
+        ],
+        conditions: {
+          StringEquals: {
+            "aws:ResourceTag/elasticraft:serverId": this.serverId,
+          },
+        },
       }),
     );
   }

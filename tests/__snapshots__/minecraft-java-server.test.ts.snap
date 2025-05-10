@@ -167,7 +167,7 @@ aws s3 cp 's3://",
                           {
                             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
                           },
-                          "/43fc2343972389e01b650471ebb993b44fc0f838d95ec58160fd4cca85195922.zip' '/tmp/elasticraft/cloud-init.zip'
+                          "/61c7d5deb7923570c0a8a223f04ac22ce45df1b777c636ea4c184c1f9a426790.zip' '/tmp/elasticraft/cloud-init.zip'
 mkdir --parents /etc/elasticraft
 echo -n 'Test' > /etc/elasticraft/server-id
 cd $(dirname '/tmp/elasticraft/cloud-init.zip')
@@ -294,9 +294,69 @@ chmod +x './cloud-init.sh'
               "Action": [
                 "logs:DescribeLogGroups",
                 "logs:DescribeLogStreams",
+                "ec2:DescribeVolumes",
               ],
               "Effect": "Allow",
               "Resource": "*",
+            },
+            {
+              "Action": "ec2:AttachVolume",
+              "Condition": {
+                "StringEquals": {
+                  "aws:ResourceTag/elasticraft:serverId": "Test",
+                  "aws:ResourceTag/elasticraft:volumeType": "data-volume",
+                },
+              },
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":ec2:",
+                    {
+                      "Ref": "AWS::Region",
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":volume/*",
+                  ],
+                ],
+              },
+            },
+            {
+              "Action": "ec2:AttachVolume",
+              "Condition": {
+                "StringEquals": {
+                  "aws:ResourceTag/elasticraft:serverId": "Test",
+                },
+              },
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":ec2:",
+                    {
+                      "Ref": "AWS::Region",
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":instance/*",
+                  ],
+                ],
+              },
             },
           ],
           "Version": "2012-10-17",

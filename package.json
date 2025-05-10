@@ -14,7 +14,7 @@
     }
   },
   "scripts": {
-    "format": "prettier --write .",
+    "format": "prettier --write . && black --target-version py39 assets",
     "prepare": "tsc -p tsconfig.build.json",
     "test": "vitest run --coverage && eslint ."
   },

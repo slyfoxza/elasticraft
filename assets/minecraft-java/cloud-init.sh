@@ -21,3 +21,13 @@ jq "walk(if type == \"string\" then gsub(\"%serverId%\"; \"$(</etc/elasticraft/s
   amazon-cloudwatch-agent.json > \
   /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
 systemctl enable --now amazon-cloudwatch-agent
+
+dnf --assumeyes install python3 python3-boto3 python3-requests
+
+# Attach the data volume
+chmod 755 attach-volume.py && ./attach-volume.py
+
+# Mount the data volume
+mkdir --parents /srv/minecraft && \
+  chmod 000 /srv/minecraft && \
+  mount /dev/xvdm /srv/minecraft
