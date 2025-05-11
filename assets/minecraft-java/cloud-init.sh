@@ -34,11 +34,13 @@ touch /var/log/minecraft.log && \
   chown minecraft: /var/log/minecraft.log && \
   chmod 644 /var/log/minecraft.log
 
-mv -t /etc/systemd/system minecraft.service
+chmod 755 enderman.py && mv -t /usr/local/bin/ enderman.py
+
+mv -t /etc/systemd/system enderman.service minecraft.service
 
 # Mount the data volume
 mkdir --parents /srv/minecraft && \
   chmod 000 /srv/minecraft && \
   mount /dev/xvdm /srv/minecraft
 
-systemctl enable --now minecraft
+systemctl enable --now enderman minecraft

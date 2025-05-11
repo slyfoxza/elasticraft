@@ -166,6 +166,9 @@ Content-Transfer-Encoding: base64
     primary_group: games
     shell: /sbin/nologin
     system: true
+    sudo:
+      - ALL=(root) NOPASSWD:/usr/bin/systemctl --no-ask-password stop
+        minecraft,/usr/bin/systemctl --no-ask-password poweroff
     uid: 25565
 ",
                   },
@@ -186,7 +189,7 @@ aws s3 cp 's3://",
                           {
                             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
                           },
-                          "/b17a00596ed8f6a5ffe5c64321752e42e96ac3b5e17e0413bd5f6a0489a5d897.zip' '/tmp/elasticraft/cloud-init.zip'
+                          "/d05c6f7c9d8d2f7073be67898ff77d756a2b3fe0a23d44c1a039152af8fd5fe1.zip' '/tmp/elasticraft/cloud-init.zip'
 mkdir --parents /etc/elasticraft
 echo -n 'Test' > /etc/elasticraft/server-id
 cd $(dirname '/tmp/elasticraft/cloud-init.zip')
@@ -336,6 +339,8 @@ chmod +x './cloud-init.sh'
                 "logs:DescribeLogGroups",
                 "logs:DescribeLogStreams",
                 "ec2:DescribeVolumes",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DescribeSecurityGroups",
               ],
               "Effect": "Allow",
               "Resource": "*",
@@ -371,7 +376,10 @@ chmod +x './cloud-init.sh'
               },
             },
             {
-              "Action": "ec2:AttachVolume",
+              "Action": [
+                "ec2:AttachVolume",
+                "ec2:ModifyNetworkInterfaceAttribute",
+              ],
               "Condition": {
                 "StringEquals": {
                   "aws:ResourceTag/elasticraft:serverId": "Test",
@@ -398,6 +406,52 @@ chmod +x './cloud-init.sh'
                   ],
                 ],
               },
+            },
+            {
+              "Action": "ec2:ModifyNetworkInterfaceAttribute",
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":ec2:",
+                      {
+                        "Ref": "AWS::Region",
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId",
+                      },
+                      ":network-interface/*",
+                    ],
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":ec2:",
+                      {
+                        "Ref": "AWS::Region",
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId",
+                      },
+                      ":security-group/*",
+                    ],
+                  ],
+                },
+              ],
             },
           ],
           "Version": "2012-10-17",

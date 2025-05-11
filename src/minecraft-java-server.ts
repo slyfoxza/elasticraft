@@ -185,6 +185,10 @@ export class MinecraftJavaServer extends Construct {
               primary_group: "games",
               shell: "/sbin/nologin",
               system: true,
+              sudo: [
+                "ALL=(root) NOPASSWD:/usr/bin/systemctl --no-ask-password stop minecraft," +
+                  "/usr/bin/systemctl --no-ask-password poweroff",
+              ],
               uid: 25_565,
             },
           ],
@@ -223,6 +227,9 @@ export class MinecraftJavaServer extends Construct {
           "logs:DescribeLogStreams",
           // Needed by attach-volume.py
           "ec2:DescribeVolumes",
+          // Needed by enderman.py
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DescribeSecurityGroups",
         ],
         resources: ["*"],
       }),
@@ -248,10 +255,13 @@ export class MinecraftJavaServer extends Construct {
       }),
     );
     this.role.addToPrincipalPolicy(
-      /* Needed by attach-volume.py: only allow it to attach the data volume to
-       * this server's instance */
       new iam.PolicyStatement({
-        actions: ["ec2:AttachVolume"],
+        actions: [
+          // Needed by attach-volume.py
+          "ec2:AttachVolume",
+          // Needed by enderman.py
+          "ec2:ModifyNetworkInterfaceAttribute",
+        ],
         resources: [
           Stack.of(this).formatArn({
             service: "ec2",
@@ -259,11 +269,30 @@ export class MinecraftJavaServer extends Construct {
             resourceName: "*",
           }),
         ],
+        // Only allow this server's instance to be modified
         conditions: {
           StringEquals: {
             "aws:ResourceTag/elasticraft:serverId": this.serverId,
           },
         },
+      }),
+    );
+    this.role.addToPrincipalPolicy(
+      // Needed by enderman.py: allow it to modify any ENI and security group
+      new iam.PolicyStatement({
+        actions: ["ec2:ModifyNetworkInterfaceAttribute"],
+        resources: [
+          Stack.of(this).formatArn({
+            service: "ec2",
+            resource: "network-interface",
+            resourceName: "*",
+          }),
+          Stack.of(this).formatArn({
+            service: "ec2",
+            resource: "security-group",
+            resourceName: "*",
+          }),
+        ],
       }),
     );
   }
