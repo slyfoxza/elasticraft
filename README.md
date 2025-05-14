@@ -13,7 +13,7 @@ Using Elasticraft, a server may be started up on-demand, and also supports autom
 
 ## Supported servers
 
-* Minecraft: Java Edition
+- Minecraft: Java Edition
 
 ## How it works
 

@@ -41,6 +41,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--dry-run", action="store_true")
 parser.add_argument("-D", "--debug", action="store_true")
 parser.add_argument("-l", "--log-path", default="/var/log/minecraft.log")
+parser.add_argument("-n", "--new-server-wait-time", type=int, default=(15 * 60))
 parser.add_argument("-w", "--rejoin-wait-time", type=int, default=(5 * 60))
 parser.add_argument("-W", "--final-wait-time", type=int, default=5)
 arguments = parser.parse_args()
@@ -61,7 +62,9 @@ class Enderman:
 
     def __init__(self):
         self.active_player_count = 0
+        self.is_new_server = True
         self.shutdown_task = None
+
         if arguments.dry_run:
             from unittest.mock import MagicMock
 
@@ -142,17 +145,25 @@ class Enderman:
                     1 if result.group("type") == "joined" else -1
                 )
 
+            if self.is_new_server and self.active_player_count > 0:
+                self.is_new_server = False
+
             # Yield between log lines to avoid starving any other coroutines
             await asyncio.sleep(0)
 
     async def shutdown(self):
         try:
-            # Wait for a longer time in case the last player disconnected due to
-            # a network issue instead of actually leaving. If they reconnect in
-            # this period, the task will be cancelled by the check in the main
-            # loop.
-            await asyncio.sleep(arguments.rejoin_wait_time)
-            logger.info("Rejoin wait time expired, removing security group")
+            # Wait for a longer time in case this is a new server and someone is
+            # struggling with DNS propagation, or if the last player
+            # disconnected due to a network issue instead of actually leaving.
+            # If they reconnect in this period, the task will be cancelled by
+            # the check in the main loop.
+            if is_new_server:
+                await asyncio.sleep(arguments.new_server_wait_time)
+                logger.info("New server wait time expired, removing security group")
+            else:
+                await asyncio.sleep(arguments.rejoin_wait_time)
+                logger.info("Rejoin wait time expired, removing security group")
 
             # Remove the security group that allows ingress to the Minecraft
             # game port. This is to ensure that no new player can connect while
