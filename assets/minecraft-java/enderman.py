@@ -158,7 +158,7 @@ class Enderman:
             # disconnected due to a network issue instead of actually leaving.
             # If they reconnect in this period, the task will be cancelled by
             # the check in the main loop.
-            if is_new_server:
+            if self.is_new_server:
                 await asyncio.sleep(arguments.new_server_wait_time)
                 logger.info("New server wait time expired, removing security group")
             else:
