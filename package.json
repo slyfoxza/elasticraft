@@ -30,7 +30,7 @@
     "typescript": "5",
     "@tsconfig/node22": "22",
     "vitest": "3",
-    "@vitest/coverage-v8": "3",
+    "@vitest/coverage-v8": "4",
     "prettier": "3",
     "eslint": "9",
     "eslint-plugin-unicorn": "57",
