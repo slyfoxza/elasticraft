@@ -189,7 +189,7 @@ aws s3 cp 's3://",
                           {
                             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
                           },
-                          "/d05c6f7c9d8d2f7073be67898ff77d756a2b3fe0a23d44c1a039152af8fd5fe1.zip' '/tmp/elasticraft/cloud-init.zip'
+                          "/5f414da996e9c9ed5413be5a30436569720014f2fcd82f88512459a9ca4a8a3e.zip' '/tmp/elasticraft/cloud-init.zip'
 mkdir --parents /etc/elasticraft
 echo -n 'Test' > /etc/elasticraft/server-id
 cd $(dirname '/tmp/elasticraft/cloud-init.zip')

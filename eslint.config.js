@@ -12,12 +12,12 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-import { globalIgnores } from "eslint/config";
+import { defineConfig, globalIgnores } from "eslint/config";
 import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 import unicorn from "eslint-plugin-unicorn";
 
-export default tseslint.config(
+export default defineConfig(
   globalIgnores(["coverage/**", "dist/**"]),
   eslint.configs.recommended,
   tseslint.configs.strictTypeChecked,
