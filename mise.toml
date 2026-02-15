@@ -13,3 +13,4 @@
 # the License.
 [tools]
 node = "24.13.1"
+"npm:pnpm" = "10"
